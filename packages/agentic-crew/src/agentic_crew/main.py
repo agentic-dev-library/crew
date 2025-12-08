@@ -414,15 +414,17 @@ def cmd_list_runners(args):
             for profile in profiles:
                 try:
                     runner = get_cli_runner(profile)
-                    runners_info.append({
-                        "name": profile,
-                        "display_name": runner.config.name,
-                        "description": runner.config.description,
-                        "available": runner.is_available(),
-                        "install_cmd": runner.config.install_cmd,
-                        "docs_url": runner.config.docs_url,
-                        "required_env": runner.get_required_env_vars(),
-                    })
+                    runners_info.append(
+                        {
+                            "name": profile,
+                            "display_name": runner.config.name,
+                            "description": runner.config.description,
+                            "available": runner.is_available(),
+                            "install_cmd": runner.config.install_cmd,
+                            "docs_url": runner.config.docs_url,
+                            "required_env": runner.get_required_env_vars(),
+                        }
+                    )
                 except Exception:
                     # Skip profiles that fail to load
                     continue
@@ -512,8 +514,7 @@ Exit codes:
 
     # List runners command
     list_runners_parser = subparsers.add_parser(
-        "list-runners",
-        help="List available single-agent CLI runners"
+        "list-runners", help="List available single-agent CLI runners"
     )
     list_runners_parser.add_argument(
         "--json", action="store_true", help="Output as JSON (for external tools)"

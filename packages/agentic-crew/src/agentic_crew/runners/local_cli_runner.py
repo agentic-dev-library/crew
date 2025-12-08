@@ -261,8 +261,7 @@ class LocalCLIRunner(SingleAgentRunner):
 
         except subprocess.TimeoutExpired as e:
             raise RuntimeError(
-                f"Command timed out after {self.config.timeout}s\n"
-                f"Command: {' '.join(cmd)}"
+                f"Command timed out after {self.config.timeout}s\nCommand: {' '.join(cmd)}"
             ) from e
 
     def _build_command(
