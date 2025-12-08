@@ -37,6 +37,8 @@ Command line options:
     --framework=<name>: Filter tests by framework (crewai, langgraph, strands)
 """
 
+from __future__ import annotations
+
 from pytest_agentic_crew.models import (
     ANTHROPIC_MODELS,
     BEDROCK_MODELS,

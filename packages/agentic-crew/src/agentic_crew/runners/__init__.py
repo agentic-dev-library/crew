@@ -13,6 +13,8 @@ Usage:
     result = runner.run(crew, inputs)
 """
 
+from __future__ import annotations
+
 from agentic_crew.core.decomposer import get_runner
 
 __all__ = ["get_runner"]
