@@ -11,6 +11,7 @@ The discovery order matches framework priority for auto-detection.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -106,7 +107,7 @@ def discover_packages(
 
 def discover_all_framework_configs(
     workspace_root: Path | None = None,
-) -> dict[str, dict[str, Path]]:
+) -> dict[str, dict[str | None, Path]]:
     """Discover all framework-specific config directories for all packages.
 
     This finds ALL framework directories, not just the first one per package.
@@ -117,11 +118,12 @@ def discover_all_framework_configs(
     Returns:
         Dict mapping package name to dict of framework -> config_dir.
         Example: {"otterfall": {"crewai": Path(...), "strands": Path(...)}}
+        Framework can be None for framework-agnostic .crew/ directories.
     """
     if workspace_root is None:
         workspace_root = get_workspace_root()
 
-    packages: dict[str, dict[str, Path]] = {}
+    packages: dict[str, dict[str | None, Path]] = {}
 
     # Check packages/ directory
     packages_dir = workspace_root / "packages"
@@ -130,7 +132,7 @@ def discover_all_framework_configs(
             if not pkg_dir.is_dir():
                 continue
 
-            pkg_configs: dict[str, Path] = {}
+            pkg_configs: dict[str | None, Path] = {}
             for dir_name in FRAMEWORK_DIRS:
                 config_dir = pkg_dir / dir_name
                 if config_dir.exists() and (config_dir / "manifest.yaml").exists():
@@ -141,7 +143,7 @@ def discover_all_framework_configs(
                 packages[pkg_dir.name] = pkg_configs
 
     # Also check workspace root
-    root_configs: dict[str, Path] = {}
+    root_configs: dict[str | None, Path] = {}
     for dir_name in FRAMEWORK_DIRS:
         config_dir = workspace_root / dir_name
         if config_dir.exists() and (config_dir / "manifest.yaml").exists():
@@ -156,7 +158,7 @@ def discover_all_framework_configs(
     return packages
 
 
-def load_manifest(crewai_dir: Path) -> dict:
+def load_manifest(crewai_dir: Path) -> dict[str, Any]:
     """Load a package's CrewAI manifest.
 
     Args:
@@ -167,7 +169,8 @@ def load_manifest(crewai_dir: Path) -> dict:
     """
     manifest_path = crewai_dir / "manifest.yaml"
     with open(manifest_path) as f:
-        return yaml.safe_load(f)
+        result = yaml.safe_load(f)
+        return result if result else {}
 
 
 def get_framework_from_config_dir(config_dir: Path) -> str | None:

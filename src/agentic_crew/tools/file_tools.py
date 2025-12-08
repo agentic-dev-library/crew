@@ -26,7 +26,7 @@ def _find_workspace_root() -> Path | None:
     return None
 
 
-def get_workspace_root(package_name: str = None) -> Path:
+def get_workspace_root(package_name: str | None = None) -> Path:
     """Get the workspace root directory for the target game code package.
 
     Returns packages/<package_name> as the workspace root, where the game code lives.

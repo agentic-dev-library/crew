@@ -155,3 +155,8 @@ version_variables = ["src/agentic_crew/__init__.py:__version__"]
 [tool.semantic_release.branches.main]
 match = "main"
 prerelease = false
+
+[dependency-groups]
+dev = [
+    "types-pyyaml>=6.0.12.20250915",
+]
