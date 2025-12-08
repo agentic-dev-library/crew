@@ -6,17 +6,43 @@ alwaysApply: true
 
 # Fundamentals
 
+## Critical: GitHub Authentication
+
+```bash
+# ALWAYS use GITHUB_JBCOM_TOKEN for jbcom repos
+GH_TOKEN="$GITHUB_JBCOM_TOKEN" gh <command>
+```
+
 ## Before Acting
 
-1. **Read before modifying** - Always read the file/code before editing
-2. **Run builds after changes** - Verify your changes compile/lint
+1. **Read before modifying** - Always read files before editing
+2. **Run tests after changes** - `uv run pytest tests/ -v`
 3. **Check git status** - Know what you're committing
+4. **Read AGENTS.md** - Understand the architecture
+
+## Development Commands
+
+```bash
+# Install
+uv sync --extra dev --extra tests
+
+# Test
+uv run pytest tests/ -v
+
+# Lint
+uvx ruff check src/ tests/ --fix
+uvx ruff format src/ tests/
+
+# Type check
+uv run mypy src/
+```
 
 ## Making Changes
 
 1. **One concern per commit** - Keep commits focused
-2. **Run linters/tests locally** before pushing
-3. **Don't consolidate code** without verifying the build
+2. **Run linters locally** before pushing
+3. **Update AGENTS.md** if architecture changes
+4. **Add tests** for new functionality
 
 ## When Copying/Moving Files
 
@@ -25,20 +51,12 @@ alwaysApply: true
 3. Update paths and references
 4. Remove tool-specific cruft that doesn't apply
 
-## Authentication
-
-```bash
-# jbcom repos - ALWAYS use this pattern
-GH_TOKEN="$GITHUB_TOKEN" gh <command>
-```
-
 ## Session Management
 
 ```bash
 # Start of session
 cat memory-bank/activeContext.md 2>/dev/null || echo "No memory bank"
-gh issue list --label agent-session 2>/dev/null || true
 
-# End of session - update context
+# End of session
 echo "## Session: $(date +%Y-%m-%d)" >> memory-bank/activeContext.md
 ```

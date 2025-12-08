@@ -1,9 +1,20 @@
-"""Tests for the loader module."""
+"""Tests for the loader module.
+
+Note: These tests require crewai to be installed.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+# Skip all tests in this module if crewai is not installed
+pytestmark = pytest.mark.skipif(
+    not pytest.importorskip("crewai", reason="crewai not installed"),
+    reason="crewai not installed",
+)
 
 
 class TestCreateAgentFromConfig:
@@ -19,8 +30,9 @@ class TestCreateAgentFromConfig:
             "backstory": "Test backstory",
         }
 
-        with patch("crew_agents.core.loader.Agent") as MockAgent:
-            with patch("crew_agents.core.loader.get_llm") as mock_get_llm:
+        # Patch at the source module since imports are done lazily inside functions
+        with patch("crewai.Agent") as MockAgent:
+            with patch("agentic_crew.config.llm.get_llm") as mock_get_llm:
                 mock_llm = MagicMock()
                 mock_get_llm.return_value = mock_llm
 
@@ -38,8 +50,8 @@ class TestCreateAgentFromConfig:
 
         config = {"goal": "Test goal", "backstory": "Test backstory"}
 
-        with patch("crew_agents.core.loader.Agent") as MockAgent:
-            with patch("crew_agents.core.loader.get_llm"):
+        with patch("crewai.Agent") as MockAgent:
+            with patch("agentic_crew.config.llm.get_llm"):
                 create_agent_from_config("custom_agent_name", config)
 
                 call_kwargs = MockAgent.call_args[1]
@@ -59,7 +71,7 @@ class TestCreateTaskFromConfig:
         }
         mock_agent = MagicMock()
 
-        with patch("crew_agents.core.loader.Task") as MockTask:
+        with patch("crewai.Task") as MockTask:
             create_task_from_config("test_task", config, mock_agent)
 
             MockTask.assert_called_once()
@@ -81,7 +93,9 @@ class TestLoadKnowledgeSources:
         knowledge_dir.mkdir()
         (knowledge_dir / "test.md").write_text("# Test Knowledge\nSome content")
 
-        with patch("crew_agents.core.loader.TextFileKnowledgeSource") as MockKnowledgeSource:
+        with patch(
+            "crewai.knowledge.source.text_file_knowledge_source.TextFileKnowledgeSource"
+        ) as MockKnowledgeSource:
             load_knowledge_sources([knowledge_dir])
 
             # Verify TextFileKnowledgeSource was called
@@ -122,24 +136,26 @@ class TestLoadCrewFromConfig:
             "knowledge_paths": [],
         }
 
-        with patch("crew_agents.core.loader.Crew") as MockCrew:
-            with patch("crew_agents.core.loader.Agent") as MockAgent:
-                with patch("crew_agents.core.loader.Task") as MockTask:
-                    with patch("crew_agents.core.loader.get_llm"):
-                        mock_agent = MagicMock()
-                        MockAgent.return_value = mock_agent
+        # Patch at the source since imports are lazy
+        with patch("crewai.Crew") as MockCrew:
+            with patch("crewai.Agent") as MockAgent:
+                with patch("crewai.Task") as MockTask:
+                    with patch("crewai.Process"):
+                        with patch("agentic_crew.config.llm.get_llm"):
+                            mock_agent = MagicMock()
+                            MockAgent.return_value = mock_agent
 
-                        mock_task = MagicMock()
-                        MockTask.return_value = mock_task
+                            mock_task = MagicMock()
+                            MockTask.return_value = mock_task
 
-                        load_crew_from_config(config)
+                            load_crew_from_config(config)
 
-                        # Verify Agent was created
-                        MockAgent.assert_called()
-                        # Verify Task was created
-                        MockTask.assert_called()
-                        # Verify Crew was created with agents and tasks
-                        MockCrew.assert_called_once()
-                        call_kwargs = MockCrew.call_args[1]
-                        assert len(call_kwargs["agents"]) == 1
-                        assert len(call_kwargs["tasks"]) == 1
+                            # Verify Agent was created
+                            MockAgent.assert_called()
+                            # Verify Task was created
+                            MockTask.assert_called()
+                            # Verify Crew was created with agents and tasks
+                            MockCrew.assert_called_once()
+                            call_kwargs = MockCrew.call_args[1]
+                            assert len(call_kwargs["agents"]) == 1
+                            assert len(call_kwargs["tasks"]) == 1

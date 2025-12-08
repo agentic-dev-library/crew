@@ -1,137 +1,161 @@
-# CrewAI - Package-Agnostic Crew Runner
+# agentic-crew
 
-A generic CrewAI engine that discovers and runs crews defined in packages' `.crewai/` directories.
+**Framework-agnostic AI crew orchestration** - declare once, run on CrewAI, LangGraph, or Strands.
+
+## Why agentic-crew?
+
+The AI agent ecosystem is fragmented:
+- **CrewAI** - Full-featured but heavyweight
+- **LangGraph** - Great for flows but different API
+- **Strands** - Lightweight but AWS-specific
+
+agentic-crew solves this with a **universal crew format** that decomposes to any framework.
+
+## Installation
+
+```bash
+# Core (no framework - auto-detects at runtime)
+pip install agentic-crew
+
+# With specific framework
+pip install agentic-crew[crewai]      # CrewAI (recommended)
+pip install agentic-crew[langgraph]   # LangGraph
+pip install agentic-crew[strands]     # AWS Strands
+
+# All frameworks
+pip install agentic-crew[ai]
+```
 
 ## Quick Start
 
-```bash
-# List all packages with crews
-just crew-list
-
-# Run a specific crew
-just crew-run otterfall game_builder --input "Create a QuestComponent"
-
-# Show crew details
-just crew-info otterfall game_builder
-```
-
-## Architecture
-
-### Engine (`internal/crewai`)
-
-The engine provides:
-- **Discovery**: Finds `.crewai/` directories in packages
-- **Loading**: Parses YAML configs into CrewAI objects
-- **Running**: Executes crews with provided inputs
-- **CLI**: `crewai run <package> <crew> --input "..."`
-
-### Package Crews (`packages/<name>/.crewai/`)
-
-Each package can define its own crews:
-
-```
-packages/otterfall/.crewai/
-  manifest.yaml       # Package crew configuration
-  knowledge/          # Domain-specific knowledge files
-  crews/
-    game_builder/
-      agents.yaml     # Agent definitions
-      tasks.yaml      # Task definitions
-```
-
-## CLI Usage
-
-```bash
-# From the internal/crewai directory
-cd internal/crewai
-
-# List available packages and crews
-uv run python -m crew_agents list
-
-# Run a crew
-uv run python -m crew_agents run otterfall game_builder --input "Create X"
-
-# Run with input from file
-uv run python -m crew_agents run otterfall game_builder --file tasks.md
-
-# Show crew info
-uv run python -m crew_agents info otterfall game_builder
-
-# Legacy: Direct build (uses otterfall game_builder)
-uv run python -m crew_agents build "Create a QuestComponent"
-```
-
-## Adding Crews to a Package
-
-1. Create `.crewai/manifest.yaml`:
+### 1. Define a Crew (YAML)
 
 ```yaml
-name: mypackage
-description: My package crews
+# .crewai/manifest.yaml
+name: my-package
 version: "1.0"
 
 crews:
-  builder:
-    description: Build components
-    agents: crews/builder/agents.yaml
-    tasks: crews/builder/tasks.yaml
-    knowledge:
-      - knowledge/patterns
-```
-
-2. Create agent and task YAML files:
-
-```yaml
-# crews/builder/agents.yaml
-senior_engineer:
-  role: Senior Engineer
-  goal: Write production-quality code
-  backstory: You are a senior developer...
+  analyzer:
+    description: Analyze codebases
+    agents: crews/analyzer/agents.yaml
+    tasks: crews/analyzer/tasks.yaml
 ```
 
 ```yaml
-# crews/builder/tasks.yaml
-write_code:
-  description: Write the requested code
-  expected_output: Working code with tests
-  agent: senior_engineer
+# crews/analyzer/agents.yaml
+code_reviewer:
+  role: Senior Code Reviewer
+  goal: Find bugs and improvements
+  backstory: Expert at code analysis
 ```
 
-3. Add knowledge files (optional):
+```yaml
+# crews/analyzer/tasks.yaml
+review_code:
+  description: Review the provided code for issues
+  expected_output: List of findings with severity
+  agent: code_reviewer
+```
+
+### 2. Run It
+
+```python
+from agentic_crew import run_crew
+
+# Auto-detects best framework
+result = run_crew("my-package", "analyzer", inputs={"code": "..."})
+```
+
+Or from CLI:
+
+```bash
+agentic-crew run my-package analyzer --input "Review this code: ..."
+```
+
+## Framework Decomposition
+
+The magic happens in `core/decomposer.py`:
+
+```python
+from agentic_crew.core.decomposer import detect_framework, get_runner
+
+# See what's available
+framework = detect_framework()  # "crewai", "langgraph", or "strands"
+
+# Get a runner
+runner = get_runner()  # Auto-selects best
+runner = get_runner("langgraph")  # Force specific
+
+# Build and run
+crew = runner.build_crew(config)
+result = runner.run(crew, inputs)
+```
+
+### Framework Priority
+
+1. **CrewAI** (if installed) - Most features, best for complex crews
+2. **LangGraph** (if CrewAI unavailable) - Good for flow-based logic
+3. **Strands** (fallback) - Lightweight, minimal deps
+
+## Package Integration
+
+Any package can define crews in a `.crewai/` directory:
 
 ```
-knowledge/
-  patterns/
-    architecture.md
-    examples.ts
+my-package/
+├── .crewai/
+│   ├── manifest.yaml
+│   ├── knowledge/
+│   │   └── domain_docs/
+│   └── crews/
+│       └── my_crew/
+│           ├── agents.yaml
+│           └── tasks.yaml
+└── src/
 ```
 
-## GitHub Actions
+Then run:
 
-The CrewAI workflow can be triggered manually:
+```bash
+agentic-crew run my-package my_crew --input "..."
+```
 
-1. Go to Actions → CrewAI Tasks
-2. Select package and crew
-3. Choose input type (Kiro tasks or custom)
-4. Run workflow
+## Use Cases
+
+### 1. Connector Builder (vendor-connectors)
+
+A crew that scrapes API docs and generates HTTP connectors:
+
+```bash
+agentic-crew run vendor-connectors connector_builder \
+  --input '{"api_docs": "https://docs.meshy.ai/en"}'
+```
+
+### 2. Code Generation (any project)
+
+Define crews for your specific domain and run them on any framework.
 
 ## Development
 
 ```bash
-# Install dependencies
-cd internal/crewai
-uv sync
+# Install with dev deps
+uv sync --extra dev --extra tests --extra crewai
 
 # Run tests
-uv run pytest
+uv run pytest tests/ -v
 
-# Test tools
-uv run python -m crew_agents test-tools
+# Lint
+uvx ruff check src/ tests/ --fix
 ```
 
-## Dependencies
+## Related Projects
 
-- **crewai**: Core CrewAI framework
-- **anthropic**: Claude API access
-- **pyyaml**: YAML parsing
-- **mesh-toolkit**: 3D asset generation (optional, from mesh-toolkit PR)
+- [vendor-connectors](https://github.com/jbcom/vendor-connectors) - HTTP connector library
+- [CrewAI](https://github.com/crewAIInc/crewAI) - Original crew framework
+- [LangGraph](https://github.com/langchain-ai/langgraph) - Graph-based agents
+- [Strands](https://github.com/strands-agents/strands-agents-python) - AWS agent framework
+
+## License
+
+MIT

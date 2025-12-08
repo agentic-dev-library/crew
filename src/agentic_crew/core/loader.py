@@ -1,18 +1,17 @@
-"""Loader module - creates CrewAI Crew objects from YAML configurations."""
+"""Loader module - creates CrewAI Crew objects from YAML configurations.
+
+Note: This module imports CrewAI lazily to allow the core package to be
+installed without requiring CrewAI. For framework-agnostic usage, prefer
+using the decomposer module with runners instead.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from crewai import Agent, Crew, Process, Task
-from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
-
-from agentic_crew.config.llm import get_llm
-from agentic_crew.tools.file_tools import (
-    DirectoryListTool,
-    GameCodeReaderTool,
-    GameCodeWriterTool,
-)
+if TYPE_CHECKING:
+    from crewai import Agent, Crew, Task
 
 
 def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
@@ -23,7 +22,12 @@ def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
 
     Returns:
         List of TextFileKnowledgeSource objects.
+
+    Raises:
+        ImportError: If crewai is not installed.
     """
+    from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+
     sources = []
 
     for knowledge_path in knowledge_paths:
@@ -35,7 +39,7 @@ def load_knowledge_sources(knowledge_paths: list[Path]) -> list:
             for file_path in knowledge_path.rglob(ext):
                 try:
                     # Read file content directly
-                    content = file_path.read_text()
+                    content = file_path.read_text(encoding="utf-8")
                     if content.strip():
                         sources.append(
                             TextFileKnowledgeSource(
@@ -62,7 +66,14 @@ def create_agent_from_config(
 
     Returns:
         Configured Agent instance.
+
+    Raises:
+        ImportError: If crewai is not installed.
     """
+    from crewai import Agent
+
+    from agentic_crew.config.llm import get_llm
+
     return Agent(
         role=agent_config.get("role", agent_name),
         goal=agent_config.get("goal", ""),
@@ -88,7 +99,12 @@ def create_task_from_config(
 
     Returns:
         Configured Task instance.
+
+    Raises:
+        ImportError: If crewai is not installed.
     """
+    from crewai import Task
+
     return Task(
         description=task_config.get("description", ""),
         expected_output=task_config.get("expected_output", ""),
@@ -104,7 +120,18 @@ def load_crew_from_config(crew_config: dict) -> Crew:
 
     Returns:
         Configured Crew instance ready to kickoff.
+
+    Raises:
+        ImportError: If crewai is not installed.
     """
+    from crewai import Crew, Process
+
+    from agentic_crew.tools.file_tools import (
+        DirectoryListTool,
+        GameCodeReaderTool,
+        GameCodeWriterTool,
+    )
+
     # Initialize tools
     code_writer = GameCodeWriterTool()
     code_reader = GameCodeReaderTool()
@@ -114,7 +141,7 @@ def load_crew_from_config(crew_config: dict) -> Crew:
 
     # Create agents
     agents_config = crew_config.get("agents", {})
-    agents = {}
+    agents: dict[str, Any] = {}
 
     for agent_name, agent_cfg in agents_config.items():
         # Determine which tools to give based on agent role
