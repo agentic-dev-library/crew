@@ -49,12 +49,14 @@ def cmd_list(args):
         all_crews = []
         for pkg_name, crews in crews_by_package.items():
             for crew in crews:
-                all_crews.append({
-                    "package": pkg_name,
-                    "name": crew["name"],
-                    "description": crew.get("description", ""),
-                    "required_framework": crew.get("required_framework"),
-                })
+                all_crews.append(
+                    {
+                        "package": pkg_name,
+                        "name": crew["name"],
+                        "description": crew.get("description", ""),
+                        "required_framework": crew.get("required_framework"),
+                    }
+                )
         print(json.dumps({"crews": all_crews}, indent=2))
         return
 
@@ -107,12 +109,16 @@ def cmd_run(args):
     packages = discover_packages()
     if args.package not in packages:
         if use_json:
-            print(json.dumps({
-                "success": False,
-                "error": f"Package '{args.package}' not found",
-                "available_packages": list(packages.keys()),
-                "duration_ms": int((time.time() - start_time) * 1000),
-            }))
+            print(
+                json.dumps(
+                    {
+                        "success": False,
+                        "error": f"Package '{args.package}' not found",
+                        "available_packages": list(packages.keys()),
+                        "duration_ms": int((time.time() - start_time) * 1000),
+                    }
+                )
+            )
         else:
             print(f"❌ Package '{args.package}' not found.")
             print(f"Available: {list(packages.keys())}")
@@ -145,12 +151,16 @@ def cmd_run(args):
         duration_ms = int((time.time() - start_time) * 1000)
 
         if use_json:
-            print(json.dumps({
-                "success": True,
-                "output": result,
-                "framework_used": framework_used,
-                "duration_ms": duration_ms,
-            }))
+            print(
+                json.dumps(
+                    {
+                        "success": True,
+                        "output": result,
+                        "framework_used": framework_used,
+                        "duration_ms": duration_ms,
+                    }
+                )
+            )
         else:
             print("\n" + "=" * 60)
             print("📄 RESULT")
@@ -160,11 +170,15 @@ def cmd_run(args):
     except (ValueError, RuntimeError) as e:
         duration_ms = int((time.time() - start_time) * 1000)
         if use_json:
-            print(json.dumps({
-                "success": False,
-                "error": str(e),
-                "duration_ms": duration_ms,
-            }))
+            print(
+                json.dumps(
+                    {
+                        "success": False,
+                        "error": str(e),
+                        "duration_ms": duration_ms,
+                    }
+                )
+            )
         else:
             print(f"❌ Error: {e}")
         sys.exit(1)  # Exit code 1 = crew execution failed
@@ -199,10 +213,14 @@ def cmd_info(args):
 
     if args.package not in packages:
         if use_json:
-            print(json.dumps({
-                "error": f"Package '{args.package}' not found",
-                "available_packages": list(packages.keys()),
-            }))
+            print(
+                json.dumps(
+                    {
+                        "error": f"Package '{args.package}' not found",
+                        "available_packages": list(packages.keys()),
+                    }
+                )
+            )
         else:
             print(f"❌ Package '{args.package}' not found.")
             print(f"Available: {list(packages.keys())}")
@@ -220,21 +238,26 @@ def cmd_info(args):
         sys.exit(2)
 
     if use_json:
-        print(json.dumps({
-            "package": args.package,
-            "name": args.crew,
-            "description": config.get("description", ""),
-            "required_framework": config.get("required_framework"),
-            "agents": [
-                {"name": name, "role": cfg.get("role", name)}
-                for name, cfg in config.get("agents", {}).items()
-            ],
-            "tasks": [
-                {"name": name, "description": cfg.get("description", "")}
-                for name, cfg in config.get("tasks", {}).items()
-            ],
-            "knowledge_paths": config.get("knowledge_paths", []),
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "package": args.package,
+                    "name": args.crew,
+                    "description": config.get("description", ""),
+                    "required_framework": config.get("required_framework"),
+                    "agents": [
+                        {"name": name, "role": cfg.get("role", name)}
+                        for name, cfg in config.get("agents", {}).items()
+                    ],
+                    "tasks": [
+                        {"name": name, "description": cfg.get("description", "")}
+                        for name, cfg in config.get("tasks", {}).items()
+                    ],
+                    "knowledge_paths": config.get("knowledge_paths", []),
+                },
+                indent=2,
+            )
+        )
         return
 
     print("=" * 60)
