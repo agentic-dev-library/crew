@@ -1,12 +1,12 @@
 [project]
 name = "agentic-crew"
-version = "0.1.0"
-description = "CrewAI-based AI agent crews for the jbcom ecosystem"
+version = "0.2.0"
+description = "Framework-agnostic AI crew orchestration - declare once, run on CrewAI, LangGraph, or Strands"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 readme = "README.md"
 authors = [{ name = "Jon Bogaty", email = "jon@jonbogaty.com" }]
-keywords = ["crewai", "ai-agents", "automation", "mcp", "multi-agent"]
+keywords = ["crewai", "langgraph", "strands", "ai-agents", "multi-agent", "orchestration"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -15,39 +15,80 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
+# Core dependencies - NO framework required (auto-detected at runtime)
 dependencies = [
-    "crewai[tools,anthropic]>=1.5.0",
     "pyyaml>=6.0.3",
     "pydantic>=2.12.4",
-    "vendor-connectors[meshy]>=202511.12.0",
 ]
 
 [project.optional-dependencies]
-server = [
-    "fastapi>=0.100.0",
-    "uvicorn>=0.23.0",
-    "httpx>=0.25.0",
+# === AI Framework Extras (install one or more) ===
+# CrewAI - full featured, default choice
+crewai = [
+    "crewai[tools,anthropic]>=1.5.0",
 ]
+# LangGraph - graph-based flows
+langgraph = [
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+]
+# AWS Strands - lightweight, AWS-native
+strands = [
+    "strands-agents>=0.1.0",
+]
+# All frameworks
+ai = [
+    "crewai[tools,anthropic]>=1.5.0",
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+    "strands-agents>=0.1.0",
+]
+
+# === Feature Extras ===
+# MCP server support
+mcp = [
+    "mcp>=1.0.0",
+]
+# Web scraping tools (for connector builder)
+scraping = [
+    "crewai[tools]>=1.5.0",
+    "beautifulsoup4>=4.12.0",
+]
+# Meshy integration
+meshy = [
+    "vendor-connectors[meshy]>=0.2.0",
+]
+
+# === Development ===
 tests = [
     "pytest>=9.0.1",
     "pytest-mock>=3.15.1",
     "pytest-cov>=5.0.0",
     "pytest-asyncio>=0.23.0",
-]
-mcp = [
-    "mcp>=1.0.0",
-]
-docs = [
-    "sphinx>=7.0.0",
-    "sphinx-js>=3.2.2",
-    "sphinx-rtd-theme>=2.0.0",
-    "sphinx-autodoc-typehints>=2.0.0",
-    "myst-parser>=3.0.0",
-    "sphinxcontrib-mermaid>=0.9.2",
+    "pytest-timeout>=2.4.0",
 ]
 dev = [
     "ruff>=0.1.0",
     "mypy>=1.8.0",
+]
+docs = [
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinx-autodoc-typehints>=2.0.0",
+    "myst-parser>=3.0.0",
+]
+
+# === Full Installation ===
+all = [
+    # All frameworks
+    "crewai[tools,anthropic]>=1.5.0",
+    "langgraph>=0.2.0",
+    "langchain-anthropic>=0.3.0",
+    "strands-agents>=0.1.0",
+    # Features
+    "mcp>=1.0.0",
+    "beautifulsoup4>=4.12.0",
+    "vendor-connectors[meshy]>=0.2.0",
 ]
 
 [project.scripts]
