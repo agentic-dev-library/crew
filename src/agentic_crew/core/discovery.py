@@ -160,20 +160,35 @@ def load_manifest(crewai_dir: Path) -> dict:
         return yaml.safe_load(f)
 
 
-def get_crew_config(crewai_dir: Path, crew_name: str) -> dict:
+def get_framework_from_config_dir(config_dir: Path) -> str | None:
+    """Determine the required framework from a config directory path.
+
+    Args:
+        config_dir: Path to a framework config directory (.crewai, .strands, etc.)
+
+    Returns:
+        Framework name if directory indicates a specific framework, None otherwise.
+    """
+    dir_name = config_dir.name
+    return DIR_TO_FRAMEWORK.get(dir_name)
+
+
+def get_crew_config(config_dir: Path, crew_name: str) -> dict:
     """Load a specific crew's configuration.
 
     Args:
-        crewai_dir: Path to the .crewai/ directory.
+        config_dir: Path to the config directory (.crewai/, .strands/, .langgraph/).
         crew_name: Name of the crew to load.
 
     Returns:
-        Dict with agents, tasks, and knowledge_paths.
+        Dict with agents, tasks, knowledge_paths, and required_framework.
+        The required_framework field indicates which framework MUST be used
+        if the config is in a framework-specific directory.
 
     Raises:
         ValueError: If crew not found in manifest.
     """
-    manifest = load_manifest(crewai_dir)
+    manifest = load_manifest(config_dir)
     crews = manifest.get("crews", {})
     crew_config = crews.get(crew_name)
 
@@ -182,8 +197,8 @@ def get_crew_config(crewai_dir: Path, crew_name: str) -> dict:
         raise ValueError(f"Crew '{crew_name}' not found. Available: {available}")
 
     # Load agents and tasks YAML
-    agents_path = crewai_dir / crew_config["agents"]
-    tasks_path = crewai_dir / crew_config["tasks"]
+    agents_path = config_dir / crew_config["agents"]
+    tasks_path = config_dir / crew_config["tasks"]
 
     agents = yaml.safe_load(agents_path.read_text()) if agents_path.exists() else {}
     tasks = yaml.safe_load(tasks_path.read_text()) if tasks_path.exists() else {}
@@ -191,9 +206,26 @@ def get_crew_config(crewai_dir: Path, crew_name: str) -> dict:
     # Resolve knowledge paths
     knowledge_paths = []
     for kp in crew_config.get("knowledge", []):
-        full_path = crewai_dir / kp
+        full_path = config_dir / kp
         if full_path.exists():
             knowledge_paths.append(full_path)
+
+    # Determine required framework from directory name
+    # If config is in .crewai/, it MUST run on CrewAI, etc.
+    required_framework = get_framework_from_config_dir(config_dir)
+
+    # Also check manifest-level preferred_framework (can be overridden by dir)
+    manifest_framework = crew_config.get("preferred_framework")
+    if manifest_framework and manifest_framework != "auto":
+        # Manifest can specify preference, but directory takes precedence
+        if required_framework and manifest_framework != required_framework:
+            print(
+                f"Warning: Crew '{crew_name}' specifies preferred_framework={manifest_framework} "
+                f"but is in {config_dir.name}/ directory which requires {required_framework}"
+            )
+
+    # Get LLM config from manifest
+    llm_config = manifest.get("llm", crew_config.get("llm", {}))
 
     return {
         "name": crew_name,
@@ -202,33 +234,50 @@ def get_crew_config(crewai_dir: Path, crew_name: str) -> dict:
         "tasks": tasks,
         "knowledge_paths": knowledge_paths,
         "manifest": manifest,
-        "crewai_dir": crewai_dir,
+        "config_dir": config_dir,
+        # Framework enforcement
+        "required_framework": required_framework,
+        "preferred_framework": manifest_framework,
+        # LLM configuration
+        "llm": llm_config,
     }
 
 
-def list_crews(package_name: str | None = None) -> dict[str, list[dict]]:
-    """List all available crews, optionally filtered by package.
+def list_crews(
+    package_name: str | None = None,
+    framework: str | None = None,
+) -> dict[str, list[dict]]:
+    """List all available crews, optionally filtered by package or framework.
 
     Args:
         package_name: If provided, only list crews for this package.
+        framework: If provided, only list crews that can run on this framework.
 
     Returns:
         Dict mapping package name to list of crew info dicts.
+        Each crew dict includes:
+        - name: Crew name
+        - description: Crew description
+        - required_framework: Framework required (if in framework-specific dir)
     """
-    packages = discover_packages()
+    packages = discover_packages(framework=framework)
     result = {}
 
-    for pkg_name, crewai_dir in packages.items():
+    for pkg_name, config_dir in packages.items():
         if package_name and pkg_name != package_name:
             continue
 
-        manifest = load_manifest(crewai_dir)
+        manifest = load_manifest(config_dir)
+        required_framework = get_framework_from_config_dir(config_dir)
+        
         crews = []
         for crew_name, crew_config in manifest.get("crews", {}).items():
             crews.append(
                 {
                     "name": crew_name,
                     "description": crew_config.get("description", ""),
+                    "required_framework": required_framework,
+                    "preferred_framework": crew_config.get("preferred_framework"),
                 }
             )
         result[pkg_name] = crews

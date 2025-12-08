@@ -32,12 +32,18 @@ from agentic_crew.core.runner import run_crew
 
 def cmd_list(args):
     """List available packages and crews."""
-    crews_by_package = list_crews(args.package if hasattr(args, "package") else None)
+    framework = getattr(args, "framework", None)
+    crews_by_package = list_crews(
+        args.package if hasattr(args, "package") else None,
+        framework=framework,
+    )
 
     if not crews_by_package:
-        print("No packages with .crewai/ directories found.")
-        print("\nTo add crews to a package, create:")
-        print("  packages/<name>/.crewai/manifest.yaml")
+        print("No packages with crew configuration directories found.")
+        print("\nTo add crews to a package, create one of:")
+        print("  packages/<name>/.crewai/manifest.yaml   # CrewAI-specific")
+        print("  packages/<name>/.langgraph/manifest.yaml  # LangGraph-specific")
+        print("  packages/<name>/.strands/manifest.yaml  # Strands-specific")
         return
 
     print("=" * 60)
@@ -48,11 +54,16 @@ def cmd_list(args):
         print(f"\n📦 {pkg_name}")
         for crew in crews:
             desc = crew.get("description", "")
-            print(f"   • {crew['name']}: {desc}")
+            framework_info = ""
+            if crew.get("required_framework"):
+                framework_info = f" [{crew['required_framework']}]"
+            print(f"   • {crew['name']}{framework_info}: {desc}")
 
 
 def cmd_run(args):
     """Run a specific crew."""
+    from agentic_crew.core.decomposer import run_crew_auto
+
     print("=" * 60)
     print(f"🚀 Running {args.package}/{args.crew}")
     print("=" * 60)
@@ -65,15 +76,39 @@ def cmd_run(args):
     else:
         input_text = ""
 
-    inputs = {"spec": input_text, "component_spec": input_text}
+    inputs = {"spec": input_text, "component_spec": input_text, "input": input_text}
 
+    # Discover package and load config
+    packages = discover_packages()
+    if args.package not in packages:
+        print(f"❌ Package '{args.package}' not found.")
+        print(f"Available: {list(packages.keys())}")
+        sys.exit(1)
+
+    config_dir = packages[args.package]
+    
     try:
-        result = run_crew(args.package, args.crew, inputs)
+        crew_config = get_crew_config(config_dir, args.crew)
+        
+        # Show framework info
+        required = crew_config.get("required_framework")
+        if required:
+            print(f"📋 Framework: {required} (required by .{required}/ directory)")
+        elif args.framework != "auto":
+            print(f"📋 Framework: {args.framework} (requested)")
+        else:
+            print("📋 Framework: auto-detect")
+
+        result = run_crew_auto(
+            crew_config,
+            inputs=inputs,
+            framework=args.framework if args.framework != "auto" else None,
+        )
         print("\n" + "=" * 60)
         print("📄 RESULT")
         print("=" * 60)
         print(result)
-    except ValueError as e:
+    except (ValueError, RuntimeError) as e:
         print(f"❌ Error: {e}")
         sys.exit(1)
 
@@ -166,6 +201,11 @@ Examples:
     # List command
     list_parser = subparsers.add_parser("list", help="List available crews")
     list_parser.add_argument("package", nargs="?", help="Package to list crews for")
+    list_parser.add_argument(
+        "--framework",
+        choices=["crewai", "langgraph", "strands"],
+        help="Filter crews by framework",
+    )
 
     # Run command
     run_parser = subparsers.add_parser("run", help="Run a crew")
@@ -173,6 +213,13 @@ Examples:
     run_parser.add_argument("crew", help="Crew name (e.g., game_builder)")
     run_parser.add_argument("--input", "-i", help="Input specification")
     run_parser.add_argument("--file", "-f", help="Read input from file")
+    run_parser.add_argument(
+        "--framework",
+        choices=["auto", "crewai", "langgraph", "strands"],
+        default="auto",
+        help="Framework to use (auto=detect, or specify). "
+        "Note: If crew is in a framework-specific directory, that takes precedence.",
+    )
 
     # Info command
     info_parser = subparsers.add_parser("info", help="Show crew details")

@@ -144,12 +144,44 @@ def decompose_crew(
     Args:
         crew_config: Crew configuration from loader.
         framework: Target framework or None for auto-detect.
+                   If crew_config has required_framework, that takes precedence.
 
     Returns:
         Framework-specific crew object ready to run.
+
+    Raises:
+        RuntimeError: If required framework is not available.
     """
+    # Check if crew config requires a specific framework
+    required_framework = crew_config.get("required_framework")
+    
+    if required_framework:
+        # Framework is enforced by config directory (.crewai, .strands, etc.)
+        if framework and framework != required_framework and framework != "auto":
+            raise ValueError(
+                f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
+                f"but {framework} was requested"
+            )
+        
+        if not is_framework_available(required_framework):
+            raise RuntimeError(
+                f"Crew requires {required_framework} but it's not installed. "
+                f"Install with: pip install {_get_install_command(required_framework)}"
+            )
+        framework = required_framework
+    
     runner = get_runner(framework)
     return runner.build_crew(crew_config)
+
+
+def _get_install_command(framework: str) -> str:
+    """Get the pip install command for a framework."""
+    install_commands = {
+        "crewai": "crewai[tools]",
+        "langgraph": "langgraph langchain-anthropic",
+        "strands": "strands-agents",
+    }
+    return install_commands.get(framework, framework)
 
 
 # Convenience function for simple use cases
@@ -163,11 +195,34 @@ def run_crew_auto(
     Args:
         crew_config: Crew configuration from loader.
         inputs: Optional inputs for the crew.
-        framework: Optional framework override.
+        framework: Optional framework override. If crew_config has
+                   required_framework (from .crewai/.strands/.langgraph dir),
+                   that takes precedence.
 
     Returns:
         Crew output as string.
+
+    Raises:
+        RuntimeError: If required framework is not available.
+        ValueError: If requested framework conflicts with required framework.
     """
+    # Check if crew config requires a specific framework
+    required_framework = crew_config.get("required_framework")
+    
+    if required_framework:
+        if framework and framework != required_framework and framework != "auto":
+            raise ValueError(
+                f"Crew requires {required_framework} (defined in .{required_framework}/ directory) "
+                f"but {framework} was requested"
+            )
+        
+        if not is_framework_available(required_framework):
+            raise RuntimeError(
+                f"Crew requires {required_framework} but it's not installed. "
+                f"Install with: pip install {_get_install_command(required_framework)}"
+            )
+        framework = required_framework
+    
     runner = get_runner(framework)
     crew = runner.build_crew(crew_config)
     return runner.run(crew, inputs or {})
