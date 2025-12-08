@@ -298,7 +298,7 @@ class LocalCLIRunner(SingleAgentRunner):
         if model:
             if self.config.model_flag:
                 cmd.extend([self.config.model_flag, model])
-            elif self.config.default_model:
+            else:
                 # Positional model (e.g., "ollama run <model>")
                 cmd.append(model)
         elif self.config.default_model and not self.config.model_flag:

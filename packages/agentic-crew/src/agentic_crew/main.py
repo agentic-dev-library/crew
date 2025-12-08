@@ -92,6 +92,24 @@ def cmd_run(args):
     if hasattr(args, "runner") and args.runner:
         return _cmd_run_single_agent(args, use_json, start_time)
 
+    # Multi-agent crew execution requires package and crew
+    if not args.package or not args.crew:
+        if use_json:
+            print(
+                json.dumps(
+                    {
+                        "success": False,
+                        "error": "Package and crew are required for multi-agent execution. "
+                        "Use --runner for single-agent tasks.",
+                        "duration_ms": int((time.time() - start_time) * 1000),
+                    }
+                )
+            )
+        else:
+            print("❌ Error: Package and crew are required for multi-agent execution.")
+            print("Use --runner for single-agent tasks or provide both package and crew.")
+        sys.exit(2)
+
     # Multi-agent crew execution (existing logic)
     from agentic_crew.core.decomposer import detect_framework, run_crew_auto
 
@@ -544,9 +562,9 @@ Exit codes:
     )
     run_parser.add_argument(
         "--auto-approve",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
         default=True,
-        help="Auto-approve changes (default: true for non-interactive mode)",
+        help="Auto-approve changes (default: true). Use --no-auto-approve to disable.",
     )
     run_parser.add_argument(
         "--json", action="store_true", help="Output as JSON (for external tools)"
