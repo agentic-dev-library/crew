@@ -10,7 +10,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-
 # Skip all tests in this module if crewai is not installed
 pytestmark = pytest.mark.skipif(
     not pytest.importorskip("crewai", reason="crewai not installed"),
@@ -93,9 +92,7 @@ class TestLoadKnowledgeSources:
         knowledge_dir.mkdir()
         (knowledge_dir / "test.md").write_text("# Test Knowledge\nSome content")
 
-        with patch(
-            "agentic_crew.core.loader.TextFileKnowledgeSource"
-        ) as MockKnowledgeSource:
+        with patch("agentic_crew.core.loader.TextFileKnowledgeSource") as MockKnowledgeSource:
             load_knowledge_sources([knowledge_dir])
 
             # Verify TextFileKnowledgeSource was called

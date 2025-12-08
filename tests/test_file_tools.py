@@ -1,10 +1,18 @@
-"""Tests for file manipulation tools."""
+"""Tests for file manipulation tools.
+
+Note: These tests require crewai to be installed for the tool base classes.
+"""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
+
+# Skip all tests if crewai not installed
+pytest.importorskip("crewai", reason="crewai not installed")
 
 
 class TestGetWorkspaceRoot:
@@ -23,7 +31,7 @@ class TestGetWorkspaceRoot:
 
         with patch.dict(os.environ, {"TARGET_PACKAGE": "other_package"}):
             with patch(
-                "crew_agents.tools.file_tools._find_workspace_root",
+                "agentic_crew.tools.file_tools._find_workspace_root",
                 return_value=temp_workspace,
             ):
                 root = get_workspace_root()
@@ -39,7 +47,7 @@ class TestGetWorkspaceRoot:
         otterfall.mkdir(parents=True, exist_ok=True)
 
         with patch(
-            "crew_agents.tools.file_tools._find_workspace_root",
+            "agentic_crew.tools.file_tools._find_workspace_root",
             return_value=temp_workspace,
         ):
             # Remove TARGET_PACKAGE if set
@@ -59,7 +67,7 @@ class TestGetWorkspaceRoot:
         custom_pkg.mkdir(parents=True)
 
         with patch(
-            "crew_agents.tools.file_tools._find_workspace_root",
+            "agentic_crew.tools.file_tools._find_workspace_root",
             return_value=temp_workspace,
         ):
             root = get_workspace_root(package_name="custom")
@@ -120,11 +128,12 @@ class TestGameCodeWriterTool:
         tool = GameCodeWriterTool()
 
         with patch(
-            "crew_agents.tools.file_tools.get_workspace_root",
+            "agentic_crew.tools.file_tools.get_workspace_root",
             return_value=temp_workspace / "packages" / "otterfall",
         ):
             result = tool._run(
-                file_path="src/ecs/TestComponent.ts", content="export const TestComponent = {};"
+                file_path="src/ecs/TestComponent.ts",
+                content="export const TestComponent = {};",
             )
 
         assert "Successfully wrote" in result
@@ -156,7 +165,7 @@ class TestGameCodeReaderTool:
         tool = GameCodeReaderTool()
 
         with patch(
-            "crew_agents.tools.file_tools.get_workspace_root",
+            "agentic_crew.tools.file_tools.get_workspace_root",
             return_value=temp_workspace / "packages" / "otterfall",
         ):
             result = tool._run(file_path="src/test.ts")
@@ -170,7 +179,7 @@ class TestGameCodeReaderTool:
         tool = GameCodeReaderTool()
 
         with patch(
-            "crew_agents.tools.file_tools.get_workspace_root",
+            "agentic_crew.tools.file_tools.get_workspace_root",
             return_value=temp_workspace / "packages" / "otterfall",
         ):
             result = tool._run(file_path="src/nonexistent.ts")
@@ -195,7 +204,7 @@ class TestDirectoryListTool:
         tool = DirectoryListTool()
 
         with patch(
-            "crew_agents.tools.file_tools.get_workspace_root",
+            "agentic_crew.tools.file_tools.get_workspace_root",
             return_value=temp_workspace / "packages" / "otterfall",
         ):
             result = tool._run(directory="src")
