@@ -132,3 +132,26 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 40
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.semantic_release]
+build_command = "uv build"
+commit_message = "chore(release): release v{version} [skip ci]"
+allow_zero_version = true
+tag_format = "v{version}"
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["src/agentic_crew/__init__.py:__version__"]
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
