@@ -3,7 +3,10 @@
 This module is registered as a pytest plugin via entry points.
 All fixtures and hooks are automatically available when the package is installed.
 
-Includes VCR.py integration for recording/replaying LLM API calls.
+Includes:
+- VCR.py integration for recording/replaying LLM API calls
+- Framework mocking fixtures (via pytest-mock integration)
+- Crew configuration fixtures for testing
 """
 
 from __future__ import annotations
@@ -13,6 +16,15 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+# Import mocking fixtures - these will be automatically available
+from pytest_agentic_crew.mocking import (  # noqa: F401
+    crew_mocker,
+    mock_crewai,
+    mock_frameworks,
+    mock_langgraph,
+    mock_strands,
+)
 
 # Import VCR fixtures (they register themselves)
 from pytest_agentic_crew.vcr import (
@@ -78,6 +90,11 @@ def pytest_collection_modifyitems(config: Any, items: list[pytest.Item]) -> None
                 item.add_marker(skip_framework)
 
 
+# =============================================================================
+# API Key Check Fixtures
+# =============================================================================
+
+
 @pytest.fixture
 def check_api_key() -> None:
     """Check that ANTHROPIC_API_KEY is available.
@@ -100,6 +117,11 @@ def check_aws_credentials() -> None:
     has_profile = os.environ.get("AWS_PROFILE")
     if not (has_key or has_profile):
         pytest.skip("AWS credentials not configured (need AWS_ACCESS_KEY_ID or AWS_PROFILE)")
+
+
+# =============================================================================
+# Crew Configuration Fixtures
+# =============================================================================
 
 
 @pytest.fixture

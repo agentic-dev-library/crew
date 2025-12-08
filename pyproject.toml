@@ -40,7 +40,7 @@ known-first-party = ["agentic_crew", "pytest_agentic_crew"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["packages/agentic-crew/tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"

@@ -4,6 +4,8 @@ Fixtures and CLI options are provided by pytest-agentic-crew plugin.
 This file is kept for any project-specific customizations.
 """
 
+from __future__ import annotations
+
 # All fixtures come from pytest_agentic_crew.plugin:
 # - check_api_key
 # - check_aws_credentials
