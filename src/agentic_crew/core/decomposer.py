@@ -44,19 +44,13 @@ def is_framework_available(framework: str) -> bool:
     if framework in _framework_cache:
         return _framework_cache[framework]
 
-    package_map = {
-        "crewai": "crewai",
-        "langgraph": "langgraph",
-        "strands": "strands",
-    }
-
-    package = package_map.get(framework)
-    if not package:
+    # Check if framework is in our supported list
+    if framework not in FRAMEWORK_PRIORITY:
         _framework_cache[framework] = False
         return False
 
     try:
-        importlib.import_module(package)
+        importlib.import_module(framework)
         _framework_cache[framework] = True
         return True
     except ImportError:

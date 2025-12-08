@@ -40,14 +40,15 @@ class LangGraphRunner(BaseRunner):
         Returns:
             Compiled LangGraph StateGraph.
         """
-        from langchain_anthropic import ChatAnthropic
         from langgraph.prebuilt import create_react_agent
 
         # For simple crews, create a ReAct agent
         # More complex crews could be converted to full StateGraphs
 
-        # Get LLM
-        llm = ChatAnthropic(model="claude-sonnet-4-20250514")
+        # Get LLM from config (respects the framework's configuration)
+        llm_config = crew_config.get("llm", {})
+        model = llm_config.get("model") if isinstance(llm_config, dict) else llm_config
+        llm = self.get_llm(model)
 
         # Build tools from task descriptions
         tools = self._build_tools_from_tasks(crew_config)
@@ -80,6 +81,21 @@ class LangGraphRunner(BaseRunner):
 
         return str(result)
 
+    def get_llm(self, model: str | None = None) -> Any:
+        """Get LangChain-compatible LLM.
+
+        Args:
+            model: Optional model name override.
+
+        Returns:
+            LangChain ChatAnthropic LLM.
+        """
+        from langchain_anthropic import ChatAnthropic
+
+        # Default to Claude 3.5 Sonnet if no model specified
+        default_model = "claude-sonnet-4-20250514"
+        return ChatAnthropic(model=model or default_model)
+
     def build_agent(self, agent_config: dict[str, Any], tools: list | None = None) -> Any:
         """Build a LangGraph-compatible agent.
 
@@ -90,10 +106,10 @@ class LangGraphRunner(BaseRunner):
         Returns:
             LangGraph agent.
         """
-        from langchain_anthropic import ChatAnthropic
         from langgraph.prebuilt import create_react_agent
 
-        llm = ChatAnthropic(model=agent_config.get("llm", "claude-sonnet-4-20250514"))
+        # Get LLM from agent config if specified
+        llm = self.get_llm(agent_config.get("llm"))
         return create_react_agent(llm, tools or [])
 
     def build_task(self, task_config: dict[str, Any], agent: Any) -> Any:

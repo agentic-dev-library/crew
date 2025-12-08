@@ -42,20 +42,32 @@ class CrewAIRunner(BaseRunner):
         """
         from crewai import Crew, Process
 
-        # Build agents
+        # Build agents with their tools from config
         agents_config = crew_config.get("agents", {})
         agents = {}
         for agent_name, agent_cfg in agents_config.items():
-            agents[agent_name] = self.build_agent(agent_cfg)
+            # Extract tools from agent config
+            agent_tools = self._resolve_tools(agent_cfg.get("tools", []))
+            agents[agent_name] = self.build_agent(agent_cfg, tools=agent_tools)
 
-        # Build tasks
+        # Build tasks, tracking them for context dependencies
         tasks_config = crew_config.get("tasks", {})
         tasks = []
+        tasks_by_name: dict[str, Any] = {}
         for task_name, task_cfg in tasks_config.items():
             agent_name = task_cfg.get("agent")
             if not agent_name or agent_name not in agents:
                 raise ValueError(f"Task '{task_name}' has invalid agent: {agent_name}")
-            tasks.append(self.build_task(task_cfg, agents[agent_name]))
+
+            # Build context from referenced tasks
+            context_tasks = []
+            for ctx_name in task_cfg.get("context", []):
+                if ctx_name in tasks_by_name:
+                    context_tasks.append(tasks_by_name[ctx_name])
+
+            task = self.build_task(task_cfg, agents[agent_name], context=context_tasks)
+            tasks.append(task)
+            tasks_by_name[task_name] = task
 
         # Load knowledge sources
         knowledge_sources = self._load_knowledge(crew_config.get("knowledge_paths", []))
@@ -109,23 +121,49 @@ class CrewAIRunner(BaseRunner):
             verbose=True,
         )
 
-    def build_task(self, task_config: dict[str, Any], agent: Any) -> Any:
+    def build_task(
+        self,
+        task_config: dict[str, Any],
+        agent: Any,
+        context: list | None = None,
+    ) -> Any:
         """Build a CrewAI Task.
 
         Args:
             task_config: Task configuration.
             agent: Agent to assign to the task.
+            context: Optional list of tasks this task depends on.
 
         Returns:
             CrewAI Task object.
         """
         from crewai import Task
 
-        return Task(
-            description=task_config.get("description", ""),
-            expected_output=task_config.get("expected_output", ""),
-            agent=agent,
-        )
+        task_kwargs = {
+            "description": task_config.get("description", ""),
+            "expected_output": task_config.get("expected_output", ""),
+            "agent": agent,
+        }
+
+        # Add context if provided (for task chaining)
+        if context:
+            task_kwargs["context"] = context
+
+        return Task(**task_kwargs)
+
+    def _resolve_tools(self, tool_names: list[str]) -> list:
+        """Resolve tool names to actual tool instances.
+
+        Args:
+            tool_names: List of tool names from config.
+
+        Returns:
+            List of tool instances.
+        """
+        # For now, return empty list - tools should be registered externally
+        # A more sophisticated implementation would look up tools by name
+        # from a registry or import them dynamically
+        return []
 
     def _load_knowledge(self, knowledge_paths: list[Path]) -> list:
         """Load knowledge sources from paths.
@@ -148,10 +186,10 @@ class CrewAIRunner(BaseRunner):
             for ext in ["*.md", "*.txt", "*.py", "*.ts"]:
                 for file_path in knowledge_path.rglob(ext):
                     try:
-                        content = file_path.read_text()
+                        content = file_path.read_text(encoding="utf-8")
                         if content.strip():
                             sources.append(TextFileKnowledgeSource(file_paths=[str(file_path)]))
-                    except OSError:
-                        pass
+                    except OSError as e:
+                        print(f"Warning: Could not load knowledge file {file_path}: {e}")
 
         return sources

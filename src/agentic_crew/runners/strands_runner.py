@@ -48,10 +48,38 @@ class StrandsRunner(BaseRunner):
         # Collect tools from tasks
         tools = self._collect_tools(crew_config)
 
-        return Agent(
-            system_prompt=system_prompt,
-            tools=tools,
-        )
+        # Get LLM/model configuration from crew config
+        llm_config = crew_config.get("llm", {})
+        model_provider = self._get_model_provider(llm_config)
+
+        agent_kwargs = {
+            "system_prompt": system_prompt,
+            "tools": tools,
+        }
+
+        # Add model provider if configured
+        if model_provider:
+            agent_kwargs["model_id"] = model_provider
+
+        return Agent(**agent_kwargs)
+
+    def _get_model_provider(self, llm_config: dict | str | None) -> str | None:
+        """Get Strands-compatible model provider from LLM config.
+
+        Args:
+            llm_config: LLM configuration from crew config.
+
+        Returns:
+            Model provider string for Strands, or None for default.
+        """
+        if not llm_config:
+            return None
+
+        if isinstance(llm_config, str):
+            return llm_config
+
+        # Extract model from config dict
+        return llm_config.get("model")
 
     def run(self, crew: Any, inputs: dict[str, Any]) -> str:
         """Execute the Strands agent.
@@ -148,7 +176,11 @@ class StrandsRunner(BaseRunner):
             for task_name, task_cfg in tasks.items():
                 desc = task_cfg.get("description", "")
                 if desc:
-                    parts.append(f"\n- {task_name}: {desc[:200]}...")
+                    # Only add ellipsis if actually truncated
+                    if len(desc) > 200:
+                        parts.append(f"\n- {task_name}: {desc[:200]}...")
+                    else:
+                        parts.append(f"\n- {task_name}: {desc}")
 
         return "\n".join(parts)
 

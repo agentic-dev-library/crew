@@ -75,9 +75,9 @@ uv run mypy src/
 src/agentic_crew/
 ├── core/                    # Framework-agnostic core
 │   ├── discovery.py         # Find .crewai/ directories
-│   ├── loader.py            # Load YAML configs
-│   ├── runner.py            # Execute crews
-│   └── decomposer.py        # Framework auto-detection & selection
+│   ├── loader.py            # Load YAML configs (requires crewai)
+│   ├── runner.py            # Legacy runner (requires crewai, prefer decomposer)
+│   └── decomposer.py        # Framework auto-detection & selection (recommended)
 ├── runners/                 # Framework-specific implementations
 │   ├── __init__.py
 │   ├── base.py              # Abstract base runner interface

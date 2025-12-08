@@ -96,12 +96,18 @@ class BaseRunner(ABC):
         """Get the LLM for this framework.
 
         Args:
-            model: Optional model name override.
+            model: Optional model name override. If None, uses DEFAULT_MODEL.
 
         Returns:
             Framework-specific LLM object.
         """
         # Default implementation - subclasses can override
-        from agentic_crew.config.llm import get_llm
+        # Import lazily to avoid requiring crewai at module load time
+        try:
+            from agentic_crew.config.llm import DEFAULT_MODEL, get_llm
 
-        return get_llm(model)
+            # Use default model if none specified to avoid AttributeError
+            return get_llm(model if model else DEFAULT_MODEL)
+        except ImportError:
+            # If llm module not available, return None (framework may have its own default)
+            return None
