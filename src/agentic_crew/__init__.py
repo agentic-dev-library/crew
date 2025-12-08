@@ -19,7 +19,7 @@ Usage:
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.1.0"
 
 # Core exports - framework-agnostic functionality
 from agentic_crew.core.decomposer import (
