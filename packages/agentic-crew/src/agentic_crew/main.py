@@ -281,6 +281,7 @@ def _cmd_run_single_agent(args, use_json: bool, start_time: float):
             task=input_text,
             working_dir=working_dir,
             auto_approve=getattr(args, "auto_approve", True),
+            structured_output=getattr(args, "structured_output", False),
         )
 
         duration_ms = int((time.time() - start_time) * 1000)
@@ -573,6 +574,12 @@ Exit codes:
         action=argparse.BooleanOptionalAction,
         default=True,
         help="Auto-approve changes (default: true). Use --no-auto-approve to disable.",
+    )
+    run_parser.add_argument(
+        "--structured-output",
+        action="store_true",
+        default=False,
+        help="Request structured (JSON) output from the runner (if supported by the tool)",
     )
     run_parser.add_argument(
         "--json", action="store_true", help="Output as JSON (for external tools)"

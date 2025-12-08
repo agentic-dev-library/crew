@@ -295,15 +295,13 @@ class LocalCLIRunner(SingleAgentRunner):
 
         # Add model if specified and tool supports it
         # For positional model (like ollama), add before task
-        if model:
+        effective_model = model or self.config.default_model
+        if effective_model:
             if self.config.model_flag:
-                cmd.extend([self.config.model_flag, model])
+                cmd.extend([self.config.model_flag, effective_model])
             else:
                 # Positional model (e.g., "ollama run <model>")
-                cmd.append(model)
-        elif self.config.default_model and not self.config.model_flag:
-            # Use default model for positional case
-            cmd.append(self.config.default_model)
+                cmd.append(effective_model)
 
         # Add task
         if self.config.task_flag:
