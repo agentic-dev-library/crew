@@ -31,9 +31,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-crewai = ["crewai[tools,anthropic]>=1.5.0"]
-langgraph = ["langgraph>=0.2", "langchain-anthropic>=0.3"]
-strands = ["strands-agents>=0.1"]
+crewai = ["crewai[tools,anthropic]>=1.5.0 ; python_version >= '3.10'"]
+langgraph = ["langgraph>=0.2 ; python_version >= '3.10'", "langchain-anthropic>=0.3 ; python_version >= '3.10'"]
+strands = ["strands-agents>=0.1 ; python_version >= '3.10'"]
 all = [
     "pytest-agentic-crew[crewai]",
     "pytest-agentic-crew[langgraph]",
