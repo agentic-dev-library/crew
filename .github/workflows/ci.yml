@@ -69,7 +69,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
 
-      - uses: hynek/setup-cached-uv@5a9d96ffa15170e34ced0e2de6c6ae8805056fd9  # v2
+      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
 
       - name: Cache tox
         uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb  # v4
@@ -99,7 +99,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - uses: hynek/setup-cached-uv@5a9d96ffa15170e34ced0e2de6c6ae8805056fd9  # v2
+      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
 
       - run: uvx ruff check packages/
       - run: uvx ruff format --check packages/
@@ -154,7 +154,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - uses: hynek/setup-cached-uv@5a9d96ffa15170e34ced0e2de6c6ae8805056fd9  # v2
+      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
 
       - name: Install python-semantic-release
         run: uv tool install python-semantic-release
