@@ -1,8 +1,8 @@
-name: CI
+name: CI (Python)
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -11,188 +11,71 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PIP_NO_PYTHON_VERSION_WARNING: "1"
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   pull-requests: write
   id-token: write
 
 jobs:
-  # ============================================
-  # BUILD & INSPECT ALL PACKAGES
-  # ============================================
-  build-packages:
-    name: Build ${{ matrix.package }}
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        package:
-          - agentic-crew
-          - pytest-agentic-crew
-
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v4
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
-          fetch-depth: 0
+          version: "latest"
+          enable-cache: true
+      - name: Lint with Ruff
+        run: uvx ruff check .
+      - name: Format check with Ruff
+        run: uvx ruff format --check .
+      - name: Type check with Mypy
+        run: |
+          uv sync --all-extras
+          uv run mypy .
 
-      - uses: hynek/build-and-inspect-python-package@efb823f52190ad02594531168b7a2d5790e66516  # v2
-        with:
-          path: packages/${{ matrix.package }}
-          upload-name-suffix: -${{ matrix.package }}
-          attest-build-provenance-github: false
-
-  # ============================================
-  # TESTS (using tox-uv)
-  # ============================================
-  tests:
-    name: Test ${{ matrix.package }} py${{ matrix.python-version }}
+  test:
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    needs: build-packages
-
+    needs: lint
     strategy:
-      fail-fast: false
       matrix:
-        package:
-          - agentic-crew
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-
+        python-version: ["3.11", "3.12", "3.13"]
+      fail-fast: false
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v4
-
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v5
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
-
-      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
-
-      - name: Cache tox
-        uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb  # v4
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Run tests
+        run: uv run pytest --cov --cov-report=xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
         with:
-          path: |
-            ~/.cache/uv
-            .tox
-          key: tox-${{ matrix.python-version }}-${{ matrix.package }}-${{ hashFiles('uv.lock', 'tox.ini', format('packages/{0}/**', matrix.package)) }}
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Install tox
-        run: uv tool install tox --with tox-uv --with tox-gh
-
-      - name: Run tests with tox
-        run: tox -e ${{ matrix.package }}
-
-  # ============================================
-  # LINT
-  # ============================================
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v4
-
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v5
-        with:
-          python-version: "3.13"
-
-      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
-
-      - run: uvx ruff check packages/
-      - run: uvx ruff format --check packages/
-
-  # ============================================
-  # REQUIRED CHECKS
-  # ============================================
-  required-checks-pass:
-    name: All CI passed
-    if: always()
-    needs: [build-packages, tests, lint]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe  # v1.2.2
-        with:
-          jobs: ${{ toJSON(needs) }}
-
-  # ============================================
-  # RELEASE (main only) - Python Semantic Release
-  # ============================================
   release:
-    name: Release ${{ matrix.package }}
+    name: Release
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: required-checks-pass
+    needs: test
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
       id-token: write
-
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - package: agentic-crew
-          - package: pytest-agentic-crew
-
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.CI_GITHUB_TOKEN }}
-
-      - name: Git config
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548  # v5
-        with:
-          python-version: "3.13"
-
-      - uses: hynek/setup-cached-uv@757bedc3f972eb7227a1aa657651f15a8527c817  # v2
-
-      - name: Install python-semantic-release
-        run: uv tool install python-semantic-release
-
+      - uses: astral-sh/setup-uv@v5
       - name: Python Semantic Release
-        id: release
-        working-directory: packages/${{ matrix.package }}
         env:
           GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
         run: |
-          # Official python-semantic-release workflow:
-          # 1. Analyzes commits since last tag using conventional commits
-          # 2. Determines next version (major/minor/patch)
-          # 3. Updates version in pyproject.toml and __init__.py
-          # 4. Generates CHANGELOG.md
-          # 5. Creates commit with message "chore(release): {version}"
-          # 6. Creates git tag
-          # 7. Pushes commit and tag to remote (using CI_GITHUB_TOKEN)
-          # 8. Creates GitHub release with changelog
-          # 9. Builds distribution packages
-          # 10. Uploads packages to GitHub release
-          
-          # Run semantic-release version to handle all of the above
+          uv tool install python-semantic-release
           semantic-release version
-          
-          # Check if a release was created by looking for new tags
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LATEST_TAG" ]; then
-            echo "released=true" >> $GITHUB_OUTPUT
-            echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          else
-            echo "released=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Publish to PyPI
-        if: steps.release.outputs.released == 'true'
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e  # v1.13.0
-        with:
-          packages-dir: packages/${{ matrix.package }}/dist
-          password: ${{ secrets.PYPI_TOKEN }}
-          skip-existing: true
+          semantic-release publish
