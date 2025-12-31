@@ -64,7 +64,7 @@ jobs:
       repo: ${{ steps.select.outputs.repo }}
       prompt: ${{ steps.select.outputs.prompt }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Select Agent
         id: select
@@ -169,10 +169,10 @@ jobs:
     if: needs.dispatch.outputs.agent != 'triage' && needs.dispatch.outputs.agent != 'assessment'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          token: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Download Prompt
         uses: actions/download-artifact@v4
@@ -185,7 +185,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           model: ${{ env.CLAUDE_MODEL }}
-          github_token: ${{ secrets.CI_GITHUB_TOKEN }}
+          github_token: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           allowed_tools: "Edit,Write,Read,Glob,Grep,LS,Bash(git:*),Bash(npm:*),Bash(pnpm:*),Bash(python:*),Bash(uv:*)"
           direct_prompt: |
             $(cat /tmp/agent-prompt.md)
@@ -209,11 +209,11 @@ jobs:
     if: needs.dispatch.outputs.agent == 'triage'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Triage Issues and PRs
         env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           REPO="${{ needs.dispatch.outputs.repo }}"
           
@@ -279,13 +279,13 @@ jobs:
     if: needs.dispatch.outputs.agent == 'assessment'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Deep Codebase Assessment
         env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           REPO="${{ needs.dispatch.outputs.repo }}"

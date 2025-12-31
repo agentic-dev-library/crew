@@ -52,12 +52,12 @@ jobs:
     outputs:
       orgs: ${{ steps.discover.outputs.orgs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Discover Managed Organizations
         id: discover
         env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           echo "🔍 Discovering managed organizations..."
           echo ""
@@ -104,15 +104,15 @@ jobs:
         org: ${{ fromJson(needs.survey.outputs.orgs) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: source
 
       - name: Checkout Target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ matrix.org }}/control-center
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          token: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           path: target
 
       - name: Load Org Context
@@ -239,7 +239,7 @@ jobs:
     steps:
       - name: Generate Report
         env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           echo "╔════════════════════════════════════════════════════════════╗"
           echo "║  📊 ECOSYSTEM SURVEYOR REPORT                              ║"

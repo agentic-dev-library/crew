@@ -49,10 +49,10 @@ jobs:
       branch: ${{ steps.branch.outputs.name }}
       improvements: ${{ steps.parse.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          token: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Setup environment
         run: |
@@ -185,7 +185,7 @@ jobs:
 
       - name: Create or update summary issue
         env:
-          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           TITLE="Weekly Assessment: $(date +%Y-%m-%d)"
           

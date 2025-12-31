@@ -281,7 +281,7 @@ jobs:
 
       - name: Sync to org documentation portal
         env:
-          DOCS_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
+          DOCS_TOKEN: ${{ secrets.CI_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           ORG: ${{ env.ORG_NAME }}
           REPO: ${{ env.REPO_NAME }}
         run: |
